@@ -1,9 +1,10 @@
 import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 import worker from './lib/app.js';
+import {originForHost} from './lib/origins.js';
 const env=JSON.parse(await readFile(process.env.CONFIG_FILE || new URL('./.env.local',import.meta.url),'utf8'));
 const port=Number(process.env.PORT || env.PORT || 4173);
 const origin=env.PUBLIC_ORIGIN || 'http://localhost:'+port;
-const server=http.createServer(async(req,res)=>{try{const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>30000){res.writeHead(413);res.end('Request too large');return;}chunks.push(chunk);}const body=Buffer.concat(chunks);const response=await worker.fetch(new Request(origin+req.url,{method:req.method,headers:req.headers,...(body.length?{body}: {})}),env);res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));}catch{res.writeHead(500,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'服务异常，请稍后重试'}));}});
+const server=http.createServer(async(req,res)=>{try{const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>30000){res.writeHead(413);res.end('Request too large');return;}chunks.push(chunk);}const body=Buffer.concat(chunks);const response=await worker.fetch(new Request(originForHost(req.headers.host,env,port)+req.url,{method:req.method,headers:req.headers,...(body.length?{body}: {})}),env);res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));}catch{res.writeHead(500,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'服务异常，请稍后重试'}));}});
 server.on('error',error=>{console.error(error.code==='EADDRINUSE'?'端口已占用。若翻译页已运行，请直接打开 http://localhost:4173':'服务启动失败：'+error.message);process.exit(1);});
 server.listen(port,'127.0.0.1',()=>console.log('iTools 已启动：'+origin));

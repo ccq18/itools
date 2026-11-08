@@ -5,6 +5,11 @@
 | 工具 | 功能 |
 | --- | --- |
 | 双文本翻译 | 两组原文均自动检测语言，分别默认译成英语和中文；各支持 10 万 Unicode 字符（含空白），使用 `free` 模型分段翻译，可取消、继续、复制和下载 |
+| IMEI | 批量检查 15 位号码的 Luhn 校验位、14 位补校验位、按 8 位前缀生成测试号码；不查询设备真实性或型号数据库 |
+| HMAC | 使用 UTF-8 密钥计算 SHA-256 / SHA-1 / SHA-512 签名，输出 Hex 或 Base64 |
+| 进制转换 | 二、八、十、十六进制整数转换，使用 BigInt 保留长整数精度 |
+| 文本处理 | 按行去重、去空白与空行、排序，适合整理订单 ID 与日志 |
+| 美国地址 | 五个无州级一般销售税州的虚构测试地址，支持分行文本和 JSON；不保证可投递 |
 | MD5 / SHA | UTF-8 文本的 MD5、SHA-1、SHA-256、SHA-512，支持大小写；按原文包含空格和换行计算 |
 | URL | 参数值、完整 URL、表单值三种模式的编码和解码 |
 | Base64 | UTF-8 文本编码和解码，支持中文和 Emoji |
@@ -28,7 +33,7 @@ npm start
 
 打开 http://localhost:4173 。未配置密钥时，本地工具仍可使用，翻译会提示接口未配置。
 
-`.env.local` 使用 JSON 格式，已排除出 Git。`PUBLIC_ORIGIN` 必须与浏览器访问的协议、主机和端口一致。可通过进程环境 `PORT` 改变监听端口，通过 `CONFIG_FILE` 指定其他配置路径。仅监听回环地址；公网访问使用 Nginx 代理。
+`.env.local` 使用 JSON 格式，已排除出 Git。`PUBLIC_ORIGIN` 必须与浏览器访问的协议、主机和端口一致。多域名部署可在 `PUBLIC_ORIGINS` 数组中列出额外允许的完整来源；只匹配配置的主机，不信任任意转发头。可通过进程环境 `PORT` 改变监听端口，通过 `CONFIG_FILE` 指定其他配置路径。仅监听回环地址；公网访问使用 Nginx 代理。
 
 ## 验证
 
@@ -47,3 +52,9 @@ npm test
 Nginx 需要将 `/itools/` 与 `/translate/` 下的请求转发到 `http://127.0.0.1:4173/`，去掉前缀；不带末尾斜线的路径需跳转到带斜线的路径。反向代理超时至少 180 秒，关闭响应缓冲。勿将根路径转发至此服务。
 
 更新服务代码后使用 `systemctl restart dual-translate`。查看日志使用 `journalctl -u dual-translate`。
+
+## 数据与标准边界
+
+IMEI 的 8 位型号分配码、6 位序列号和校验位结构依据 [RFC 7254](https://www.rfc-editor.org/rfc/rfc7254.html) 与 3GPP TS 23.003 Annex B。工具只验证数字结构和 Luhn 校验位，不判断设备真实存在、型号归属、黑名单或激活状态。生成号码仅作为软件测试数据。
+
+地址的街道和门牌是虚构数据，不能用于收货或证明居住地。城市/ZIP 样例来自各州公开政府联系目录，来源保留在 `public/tools-core.js`。无州级一般销售税不代表所有交易和税种免税；[阿拉斯加地方政府仍可征收销售税](https://www.commerce.alaska.gov/web/dcra/OfficeoftheStateAssessor/AlaskaSalesTaxInformation.aspx)。其他州资料：[Delaware](https://revenue.delaware.gov/business-tax-forms/exemption-certificates/)、[Oregon](https://www.oregon.gov/dor/programs/businesses/Pages/Sales-tax.aspx)、[Montana](https://revenue.mt.gov/taxes/general-sales-tax)、[New Hampshire](https://www.revenue.nh.gov/faq/does-new-hampshire-have-sales-tax)。核对日期：2026-11-08。

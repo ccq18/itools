@@ -88,3 +88,73 @@ export function decodeJWT(value) {
   if(!header||typeof header!=='object'||Array.isArray(header)||!payload||typeof payload!=='object'||Array.isArray(payload)) throw new Error('JWT 头部和载荷必须是 JSON 对象');
   return {header,payload};
 }
+
+// 3GPP TS 23.003 Annex B: 14-digit body plus a Luhn check digit.
+export function imeiCheckDigit(body) {
+  if(!/^\d{14}$/.test(body)) throw new Error('补校验位需要恰好 14 位数字');
+  let sum=0;
+  for(let i=0;i<body.length;i++){let n=Number(body[i]);if(i%2===1){n*=2;if(n>9)n-=9;}sum+=n;}
+  return String((10-sum%10)%10);
+}
+export function inspectIMEI(imei) {
+  if(!/^\d{15}$/.test(imei)) throw new Error('IMEI 需要恰好 15 位数字');
+  const expected=imeiCheckDigit(imei.slice(0,14));
+  return {imei,tac:imei.slice(0,8),serial:imei.slice(8,14),checkDigit:imei[14],expected,checksumValid:imei[14]===expected};
+}
+function checkCount(count,max=100){if(!Number.isInteger(count)||count<1||count>max)throw new Error('数量必须是 1 到 '+max+' 之间的整数');}
+function randomBelow(max,cryptoImpl){
+  const limit=Math.floor(0x100000000/max)*max;
+  const bytes=new Uint32Array(1);let value;
+  do{cryptoImpl.getRandomValues(bytes);value=bytes[0];}while(value>=limit);
+  return value%max;
+}
+export function generateIMEIs(prefix,count,cryptoImpl=globalThis.crypto){
+  if(!/^\d{8}$/.test(prefix))throw new Error('生成前缀需要恰好 8 位数字');checkCount(count);
+  const results=new Set();
+  while(results.size<count){const body=prefix+String(randomBelow(1000000,cryptoImpl)).padStart(6,'0');results.add(body+imeiCheckDigit(body));}
+  return [...results];
+}
+export async function hmac(text,key,algorithm='SHA-256',format='hex',cryptoImpl=globalThis.crypto){
+  if(!key)throw new Error('请输入签名密钥');
+  if(!['SHA-256','SHA-1','SHA-512'].includes(algorithm))throw new Error('不支持的签名算法');
+  const encoder=new TextEncoder();
+  const cryptoKey=await cryptoImpl.subtle.importKey('raw',encoder.encode(key),{name:'HMAC',hash:algorithm},false,['sign']);
+  const bytes=new Uint8Array(await cryptoImpl.subtle.sign('HMAC',cryptoKey,encoder.encode(text)));
+  return format==='base64'?btoa(String.fromCharCode(...bytes)):Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+}
+export function convertRadix(input,from,to){
+  if(![2,8,10,16].includes(from)||![2,8,10,16].includes(to))throw new Error('支持二、八、十、十六进制');
+  let value=input.trim(),negative=false;
+  if(value.startsWith('-')||value.startsWith('+')){negative=value[0]==='-';value=value.slice(1);}
+  const prefixes={2:'0b',8:'0o',16:'0x'};
+  if(prefixes[from]&&value.toLowerCase().startsWith(prefixes[from]))value=value.slice(2);
+  if(!value)throw new Error('请输入整数');
+  let result=0n;
+  for(const char of value.toLowerCase()){
+    const digit='0123456789abcdef'.indexOf(char);
+    if(digit<0||digit>=from)throw new Error('输入包含不属于 '+from+' 进制的字符；仅支持整数');
+    result=result*BigInt(from)+BigInt(digit);
+  }
+  return (negative?-result:result).toString(to);
+}
+export function processLines(text,{trim=true,removeEmpty=true,unique=true,sort='none'}={}){
+  let lines=text.split(/\r?\n/);if(trim)lines=lines.map(s=>s.trim());if(removeEmpty)lines=lines.filter(s=>s.length);
+  if(unique)lines=[...new Set(lines)];
+  if(sort==='asc')lines.sort();else if(sort==='desc')lines.sort().reverse();else if(sort==='numeric')lines.sort((a,b)=>a.localeCompare(b,'en',{numeric:true}));
+  return lines.join('\n');
+}
+// City / ZIP examples sourced from state government contact directories.
+// Street names and numbers below are synthetic and have not been delivery-validated.
+export const addressStates={
+ DE:{name:'特拉华州 Delaware',city:'Dover',zip:'19901',source:'https://sos.delaware.gov/contact/'},
+ OR:{name:'俄勒冈州 Oregon',city:'Salem',zip:'97301',source:'https://www.oregon.gov/DOR/Pages/map.aspx'},
+ MT:{name:'蒙大拿州 Montana',city:'Helena',zip:'59601',source:'https://dphhs.mt.gov/hcsd/officeofpublicassistance'},
+ NH:{name:'新罕布什尔州 New Hampshire',city:'Concord',zip:'03301',source:'https://www.sos.nh.gov/contact-us'},
+ AK:{name:'阿拉斯加州 Alaska',city:'Juneau',zip:'99801',source:'https://www.labor.alaska.gov/dvr/contact.htm'}
+};
+export function generateAddresses(state,count,cryptoImpl=globalThis.crypto){
+  if(!Object.hasOwn(addressStates,state))throw new Error('请选择列表中的州');checkCount(count,20);
+  const city=addressStates[state];
+  const streets=['Example Meadow Lane','Example Cedar Avenue','Example Willow Court','Example Maple Drive','Example Brook Road'];
+  return Array.from({length:count},()=>({addressLine1:(100+randomBelow(9900,cryptoImpl))+' '+streets[randomBelow(streets.length,cryptoImpl)],city:city.city,state,postalCode:city.zip,country:'US',fictitious:true}));
+}
