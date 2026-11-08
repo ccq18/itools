@@ -1,5 +1,7 @@
 # iTools
 
+[在线使用](https://itool.lrdzero.uk/)
+
 后端开发常用工具箱，顶部快捷切换。除翻译外，所有计算均在浏览器本地完成，不上传输入、不保存历史，不依赖外部 CDN。
 
 | 工具 | 功能 |
@@ -45,11 +47,11 @@ npm test
 
 ## 当前服务器
 
-入口为 `/itools/`，原 `/translate/` 保留；首页和模型网关路径不变。
+专用域名入口为 https://itool.lrdzero.uk/ ，DNS A 记录指向现有服务器。IP 地址下的 `/itools/` 和原 `/translate/` 保留；IP 站点首页和模型网关路径不变。
 
 代码发布到 `/opt/itools/releases/<commit>`，`/opt/itools/current` 指向当前版本。复用独立的 `dual-translate.service` 和 `dualtranslate` 用户；服务配置模板见 `deploy/itools.service`。运行配置继续由服务器的 `/opt/dual-translate/.env.local` 提供，密钥不进入代码仓库。模型通过服务器内部 `/v1` 接口调用，固定使用 `free`。
 
-Nginx 需要将 `/itools/` 与 `/translate/` 下的请求转发到 `http://127.0.0.1:4173/`，去掉前缀；不带末尾斜线的路径需跳转到带斜线的路径。反向代理超时至少 180 秒，关闭响应缓冲。勿将根路径转发至此服务。
+Nginx 需要将 `/itools/` 与 `/translate/` 下的请求转发到 `http://127.0.0.1:4173/`，去掉前缀；不带末尾斜线的路径需跳转到带斜线的路径。反向代理超时至少 180 秒，关闭响应缓冲。勿将 IP 站点根路径转发至此服务。专用域名根路径使用独立 Nginx 虚拟主机，配置见 `deploy/itools-domain.conf`。
 
 更新服务代码后使用 `systemctl restart dual-translate`。查看日志使用 `journalctl -u dual-translate`。
 
@@ -58,3 +60,5 @@ Nginx 需要将 `/itools/` 与 `/translate/` 下的请求转发到 `http://127.0
 IMEI 的 8 位型号分配码、6 位序列号和校验位结构依据 [RFC 7254](https://www.rfc-editor.org/rfc/rfc7254.html) 与 3GPP TS 23.003 Annex B。工具只验证数字结构和 Luhn 校验位，不判断设备真实存在、型号归属、黑名单或激活状态。生成号码仅作为软件测试数据。
 
 地址的街道和门牌是虚构数据，不能用于收货或证明居住地。城市/ZIP 样例来自各州公开政府联系目录，来源保留在 `public/tools-core.js`。无州级一般销售税不代表所有交易和税种免税；[阿拉斯加地方政府仍可征收销售税](https://www.commerce.alaska.gov/web/dcra/OfficeoftheStateAssessor/AlaskaSalesTaxInformation.aspx)。其他州资料：[Delaware](https://revenue.delaware.gov/business-tax-forms/exemption-certificates/)、[Oregon](https://www.oregon.gov/dor/programs/businesses/Pages/Sales-tax.aspx)、[Montana](https://revenue.mt.gov/taxes/general-sales-tax)、[New Hampshire](https://www.revenue.nh.gov/faq/does-new-hampshire-have-sales-tax)。核对日期：2026-11-08。
+
+专用域名证书使用服务器已有 Certbot 的 webroot 方式签发，验证目录为 `/var/www/html`，证书名 `itools-domain`。`itools-cert-renew.timer` 每日检查续期，成功续期后由证书配置中的 deploy hook 重新加载 Nginx。相关单元见 `deploy/itools-cert-renew.service` 和 `.timer`。续期验证命令：`/opt/certbot/bin/certbot renew --cert-name itools-domain --dry-run`。
