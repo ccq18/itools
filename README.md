@@ -2,11 +2,12 @@
 
 [在线使用](https://itool.lrdzero.uk/)
 
-后端开发常用工具箱，顶部快捷切换。除翻译外，所有计算均在浏览器本地完成，不上传输入、不保存历史，不依赖外部 CDN。
+后端开发常用工具箱，顶部快捷切换。除翻译和出口 IP 查询外，所有计算均在浏览器本地完成。出口 IP 仅由本站服务器观察请求来源，不调用第三方 IP 查询服务；其他工具不上传输入、不保存历史，不依赖外部 CDN。
 
 | 工具 | 功能 |
 | --- | --- |
 | 双文本翻译 | 两组原文均自动检测语言，分别默认译成英语和中文；各支持 10 万 Unicode 字符（含空白），使用 `free` 模型分段翻译，可取消、继续、复制和下载 |
+| 出口 IP | 显示当前请求到达本站时的来源 IP（IPv4 / IPv6），支持刷新和复制；代理分流时仅代表访问本站的线路 |
 | IMEI | 批量检查 15 位号码的 Luhn 校验位、14 位补校验位、按 8 位前缀生成测试号码；不查询设备真实性或型号数据库 |
 | HMAC | 使用 UTF-8 密钥计算 SHA-256 / SHA-1 / SHA-512 签名，输出 Hex 或 Base64 |
 | 进制转换 | 二、八、十、十六进制整数转换，使用 BigInt 保留长整数精度 |
@@ -62,3 +63,5 @@ IMEI 的 8 位型号分配码、6 位序列号和校验位结构依据 [RFC 7254
 地址的街道和门牌是虚构数据，不能用于收货或证明居住地。城市/ZIP 样例来自各州公开政府联系目录，来源保留在 `public/tools-core.js`。无州级一般销售税不代表所有交易和税种免税；[阿拉斯加地方政府仍可征收销售税](https://www.commerce.alaska.gov/web/dcra/OfficeoftheStateAssessor/AlaskaSalesTaxInformation.aspx)。其他州资料：[Delaware](https://revenue.delaware.gov/business-tax-forms/exemption-certificates/)、[Oregon](https://www.oregon.gov/dor/programs/businesses/Pages/Sales-tax.aspx)、[Montana](https://revenue.mt.gov/taxes/general-sales-tax)、[New Hampshire](https://www.revenue.nh.gov/faq/does-new-hampshire-have-sales-tax)。核对日期：2026-11-08。
 
 专用域名证书使用服务器已有 Certbot 的 webroot 方式签发，验证目录为 `/var/www/html`，证书名 `itools-domain`。`itools-cert-renew.timer` 每日检查续期，成功续期后由证书配置中的 deploy hook 重新加载 Nginx。相关单元见 `deploy/itools-cert-renew.service` 和 `.timer`。续期验证命令：`/opt/certbot/bin/certbot renew --cert-name itools-domain --dry-run`。
+
+出口 IP 接口为 `GET api/ip`，返回 `ip`、`version` 和 `observedAt`，禁止缓存。服务只监听回环地址，只有连接来自回环代理时才接受 Nginx 用 `$remote_addr` 覆盖的 `X-Real-IP`；不信任客户端填写的 `X-Forwarded-For` 或 `CF-Connecting-IP`。若将来启用 CDN / 多层代理，需单独配置可信代理边界，否则会显示最近一层代理的 IP。
