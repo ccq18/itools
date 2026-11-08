@@ -1,0 +1,23 @@
+[Unit]
+Description=iTools developer utilities and translation
+After=network-online.target airouter.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dualtranslate
+Group=dualtranslate
+WorkingDirectory=/opt/itools/current
+Environment=NODE_ENV=production
+Environment=CONFIG_FILE=/opt/dual-translate/.env.local
+ExecStart=/usr/bin/node /opt/itools/current/server.mjs
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
