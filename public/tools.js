@@ -116,6 +116,6 @@ function route(){
   document.querySelectorAll('.toolpage').forEach(node=>node.hidden=node.id!=='tool-'+id);
   document.querySelectorAll('.toolnav a').forEach(node=>{const active=node.dataset.tool===id;node.classList.toggle('active',active);if(active)node.setAttribute('aria-current','page');else node.removeAttribute('aria-current');});
   if(id==='ip'&&!$('ip-output').value&&!ipLoading)run(definitions.find(d=>d.id==='ip'),'refresh');
-  document.title=(id==='translate'?'双文本翻译':definitions.find(d=>d.id===id).title)+' · iTools';
+  document.title=(id==='translate'?'双向翻译':definitions.find(d=>d.id===id).title)+' · iTools';
 }
 window.addEventListener('hashchange',route);route();

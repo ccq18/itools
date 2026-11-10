@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "后端开发常用工具与双文本翻译",
+  "description": "后端开发常用工具与双向翻译",
   "engines": { "node": ">=22" },
   "scripts": { "start": "node server.mjs", "test": "node --test test/*.test.mjs" }
 }
